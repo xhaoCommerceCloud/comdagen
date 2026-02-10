@@ -1,10 +1,18 @@
 sourcecodes:
   # number of generated source code groups
-  elementCount: 10
+  # NOTE: elementCount is ignored when pricebooks are available
+  # The actual group count is calculated as: ceil(number_of_pricebooks / pricebooksPerGroup)
+  elementCount: 0
+  
   # range of codes per source code group
   minCodes: 1
-  maxCodes: 10
+  maxCodes: 1
 
-  # generate random custom attributes
-  generatedAttributes:
-    elementCount: 5
+  # fixed number of pricebooks per source code group
+  # pricebooks are distributed sequentially - each pricebook assigned to exactly one group
+  # Example: 5000 pricebooks with pricebooksPerGroup=5 creates 1000 groups
+  pricebooksPerGroup: 5
+
+#  # generate random custom attributes
+#  generatedAttributes:
+#    elementCount: 5

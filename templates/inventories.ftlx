@@ -13,7 +13,11 @@
             <record product-id="${record.productId}">
                 <allocation>${record.allocation}</allocation>
                 <allocation-timestamp>${record.allocationDateTime}</allocation-timestamp>
+                <perpetual>${record.perpetual?c}</perpetual>
+                <preorder-backorder-handling>none</preorder-backorder-handling>
                 <ats>${record.ats}</ats>
+                <on-order>0</on-order>
+                <turnover>0</turnover>
             </record>
             </#list>
         </records>

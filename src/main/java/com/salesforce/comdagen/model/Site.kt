@@ -156,7 +156,10 @@ class Site(
 
     val sourceCodeGenerator: SourceCodeGenerator? =
         if (sourceCodeConfig != null)
-            SourceCodeGenerator(sourceCodeConfig)
+            SourceCodeGenerator(
+                sourceCodeConfig,
+                pricebookIds = pricebookGenerator?.objects?.map { it.id }?.toList()
+            )
         else
             null
 

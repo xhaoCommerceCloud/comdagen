@@ -13,7 +13,11 @@ import com.salesforce.comdagen.config.SourceCodeConfiguration
 import org.apache.commons.lang3.RandomStringUtils
 import java.util.*
 
-data class SourceCodeGroup(private val seed: Long, private val config: SourceCodeConfiguration) {
+data class SourceCodeGroup(
+    private val seed: Long,
+    private val config: SourceCodeConfiguration,
+    val pricebooks: List<String>? = null
+) {
     val id: String
         get() = "comdagen-${Math.abs(seed + "sourceCodeId".hashCode())}"
 

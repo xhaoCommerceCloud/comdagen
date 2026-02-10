@@ -1,7 +1,7 @@
 # catalog configuration
 catalogs:
   # number of master catalogs
-  elementCount: 3
+  elementCount: 1
 
   initialSeed: 1234
 
@@ -10,7 +10,7 @@ catalogs:
 
   # number of categories per catalog
   categories:
-    elementCount: 50
+    elementCount: 5
     categoryTreeDepth: 5
     categoryTreeBreadth: 10
 
