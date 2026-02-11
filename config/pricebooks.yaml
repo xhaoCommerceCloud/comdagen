@@ -4,7 +4,7 @@ pricebooks:
     id: "pricebook"
 
     # number of pricebooks to generate for this configuration
-    elementCount: 10
+    elementCount: 50
 
     # define range of prices per product and pricebook
     minAmountCount: 1

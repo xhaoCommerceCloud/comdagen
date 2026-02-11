@@ -132,6 +132,10 @@ constructor(
                 templateName,
                 "${generator.configuration.outputDir}/${catalog.id}/${generator.configuration.getFileName()}", modelData
             )
+
+            // Generate CSV file with category names
+            LOGGER.info("Start generating categories CSV for catalog ${catalog.id}")
+            produceCategoriesCsv(catalog.categories, "${generator.configuration.outputDir}/${catalog.id}/categories.csv")
         }
     }
 
@@ -295,6 +299,10 @@ constructor(
                 LOGGER.info("Start rendering source codes for site ${it.id} with template ${it.sourceCodeGenerator.generatorTemplate}")
                 val sourceCodeData = mapOf("gen" to it.sourceCodeGenerator)
                 produce(it.sourceCodeGenerator.generatorTemplate, "sites/${it.id}/sourcecodes.xml", sourceCodeData)
+
+                // Also generate CSV file with source codes
+                LOGGER.info("Start generating source codes CSV for site ${it.id}")
+                produceSourceCodesCsv(it.sourceCodeGenerator, "sites/${it.id}/sourcecodes.csv")
 
                 sourceCodeGenerators.add(it.sourceCodeGenerator)
             }
@@ -468,6 +476,51 @@ constructor(
             } else {
                 LOGGER.warn("File not found at : $fileName")
             }
+        }
+    }
+
+    /**
+     * Generates a CSV file containing all category IDs.
+     * Format: category_id
+     */
+    @Throws(IOException::class)
+    private fun produceCategoriesCsv(categories: List<com.salesforce.comdagen.model.Category>, outputFileName: String) {
+        try {
+            FileWriter(File(outputDir, outputFileName)).use { writer ->
+                // Write CSV header
+                writer.write("category_id\n")
+                
+                // Write each category
+                categories.forEach { category ->
+                    writer.write("${category.id}\n")
+                }
+            }
+        } catch (e: IOException) {
+            LOGGER.error("Unable to produce CSV file {}", outputFileName, e)
+        }
+    }
+
+    /**
+     * Generates a CSV file containing all source codes.
+     * Format: group_id,source_code,pricebooks
+     */
+    @Throws(IOException::class)
+    private fun produceSourceCodesCsv(generator: SourceCodeGenerator, outputFileName: String) {
+        try {
+            FileWriter(File(outputDir, outputFileName)).use { writer ->
+                // Write CSV header
+                writer.write("group_id,source_code,pricebooks\n")
+                
+                // Write each source code group and its codes
+                generator.objects.forEach { group ->
+                    val pricebooksStr = group.pricebooks?.joinToString(";") ?: ""
+                    group.sourceCodes.forEach { code ->
+                        writer.write("${group.id},${code},${pricebooksStr}\n")
+                    }
+                }
+            }
+        } catch (e: IOException) {
+            LOGGER.error("Unable to produce CSV file {}", outputFileName, e)
         }
     }
 
