@@ -206,6 +206,51 @@ constructor(
     }
 
     @Throws(IOException::class)
+    private fun renderPricebooks(generator: PricebookGenerator, currentGeneratorIndex: Int = 0) {
+        val maxPerFile = generator.configuration.maxPricebooksPerFile
+        File("$outputDir/${generator.configuration.outputDir}").apply { mkdirs() }
+
+        if (maxPerFile == null || maxPerFile <= 0) {
+            // No splitting - render all pricebooks to a single file
+            val modelData = mapOf("gen" to generator)
+            produce(
+                generator.generatorTemplate,
+                "${generator.configuration.outputDir}/${generator.configuration.getFileName(currentGeneratorIndex)}",
+                modelData
+            )
+        } else {
+            // Split pricebooks into multiple files
+            val allPricebooks = generator.objects.toList()
+            val chunks = allPricebooks.chunked(maxPerFile)
+            
+            LOGGER.info("Splitting ${allPricebooks.size} pricebooks into ${chunks.size} files (max $maxPerFile per file)")
+            
+            chunks.forEachIndexed { chunkIndex, pricebookChunk ->
+                // Create a wrapper that provides the chunk as a sequence
+                val chunkWrapper = object {
+                    val objects: Sequence<com.salesforce.comdagen.model.Pricebook> = pricebookChunk.asSequence()
+                }
+                val modelData = mapOf("gen" to chunkWrapper)
+                
+                // Calculate file index: combine generator index and chunk index
+                val fileIndex = if (chunks.size > 1) {
+                    if (currentGeneratorIndex > 0) currentGeneratorIndex * 1000 + chunkIndex + 1 else chunkIndex + 1
+                } else {
+                    currentGeneratorIndex
+                }
+                
+                val fileName = generator.configuration.getFileName(fileIndex)
+                LOGGER.info("Writing pricebook file $fileName with ${pricebookChunk.size} pricebooks")
+                produce(
+                    generator.generatorTemplate,
+                    "${generator.configuration.outputDir}/$fileName",
+                    modelData
+                )
+            }
+        }
+    }
+
+    @Throws(IOException::class)
     private fun render(siteTemplateName: String, preferencesTemplateName: String, generator: SiteGenerator) {
         val catalogGenerators: MutableSet<CatalogGenerator> = mutableSetOf()
         val pricebookGenerators: MutableSet<PricebookGenerator> = mutableSetOf()
@@ -384,7 +429,7 @@ constructor(
 
 
             LOGGER.info("Start rendering pricebooks with template ${pricebookGenerator.generatorTemplate}")
-            render(pricebookGenerator, index)
+            renderPricebooks(pricebookGenerator, index)
         }
 
         // render customer lists

@@ -76,6 +76,13 @@ data class PricebookConfiguration(
      */
     val children: List<PricebookConfiguration>? = null,
 
+    /**
+     * Maximum number of pricebooks per XML file.
+     * When set, the output will be split into multiple files if the total number of pricebooks exceeds this limit.
+     * If null or 0, all pricebooks will be written to a single file.
+     */
+    val maxPricebooksPerFile: Int? = null,
+
     override val elementCount: Int = 1,
     override val initialSeed: Long,
     override val outputFilePattern: String = "pricebooks\${i}.xml",
