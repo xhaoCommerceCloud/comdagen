@@ -40,6 +40,25 @@ data class PricebookGenerator(
         get() {
             val pricebooks: MutableList<Pricebook> = mutableListOf()
 
+            // Calculate total price entries once globally: products with prices * pricebooks * avg amounts per product
+            val totalProductCount = catalogConfiguration.totalProductCount()
+            val productsWithPrices = (totalProductCount * configuration.coverage).toInt()
+            val avgAmountsPerProduct = (configuration.minAmountCount + configuration.maxAmountCount) / 2
+            val totalPriceEntryCount = productsWithPrices * configuration.elementCount * avgAmountsPerProduct
+
+            // Generate global list of unique prices if priceUniquenessRatio is set
+            val uniquePrices = if (configuration.priceUniquenessRatio != null && totalPriceEntryCount > 0) {
+                val uniquePriceCount = (totalPriceEntryCount * configuration.priceUniquenessRatio).toInt().coerceAtLeast(1)
+                // Generate evenly spaced prices across the range
+                val step = (configuration.maxAmount - configuration.minAmount) / (uniquePriceCount - 1).coerceAtLeast(1)
+                (0 until uniquePriceCount).map { i ->
+                    configuration.minAmount + (step * i)
+                }
+            } else {
+                null
+            }
+
+            var globalPriceIndex = 0
             for (currency in currencies) {
                 val rng = Random(configuration.initialSeed)
                 for (i in (1..configuration.elementCount)) {
@@ -48,7 +67,6 @@ data class PricebookGenerator(
                     // generate ParentPriceBook
                     val allProductIds = GeneratorHelper.getProductIds(catalogConfiguration)
 
-                    val totalProductCount = catalogConfiguration.totalProductCount()
                     val productIds =
                         getPartialProductSequence(seed, totalProductCount, configuration.coverage, allProductIds)
 
@@ -59,9 +77,17 @@ data class PricebookGenerator(
                         configuration,
                         currency.toString(),
                         i,
-                        catalogConfiguration.hashCode()
+                        catalogConfiguration.hashCode(),
+                        totalPriceEntryCount,
+                        uniquePrices,
+                        globalPriceIndex
                     )
                     pricebooks.add(parent)
+                    
+                    // Update global counter for next pricebook
+                    if (uniquePrices != null) {
+                        globalPriceIndex = (globalPriceIndex + productsWithPrices) % uniquePrices.size
+                    }
 
                     // generate child pricebooks for parent if any
                     configuration.children?.forEach { childConfig ->
@@ -79,7 +105,9 @@ data class PricebookGenerator(
                                 childConfig,
                                 currency.toString(),
                                 i,
-                                catalogConfiguration.hashCode()
+                                catalogConfiguration.hashCode(),
+                                totalPriceEntryCount,
+                                uniquePrices
                             )
                         )
                     }

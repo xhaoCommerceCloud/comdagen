@@ -14,11 +14,16 @@ pricebooks:
 
     # define range of prices per product and pricebook
     minAmountCount: 1
-    maxAmountCount: 2
+    maxAmountCount: 1
 
     # define range of price in USD
     minAmount: 0.01
-    maxAmount: 2000.0
+    maxAmount: 9999.99
+
+    # price uniqueness ratio (0.0 to 1.0) - ratio of unique prices to total price entries
+    # e.g., 0.1 means 10% unique prices, so if 1000 products, only 100 unique price values
+    # if not set, prices are generated as continuous random values
+    priceUniquenessRatio: 0.1
 
 #    # define pricebook custom attributes
 #    customAttributes:

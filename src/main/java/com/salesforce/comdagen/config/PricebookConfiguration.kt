@@ -42,6 +42,13 @@ data class PricebookConfiguration(
     val maxAmount: Double = 2000.0,
 
     /**
+     * Price uniqueness ratio (0.0 to 1.0) - ratio of unique prices to total price entries.
+     * e.g., 0.1 means 10% unique prices, so if 1000 products, only 100 unique price values.
+     * If null, prices are generated as continuous random values (effectively 1.0).
+     */
+    val priceUniquenessRatio: Double? = null,
+
+    /**
      * minimum number of values per product
      */
     val minAmountCount: Int = 1,
@@ -92,5 +99,7 @@ data class PricebookConfiguration(
     init {
         require(maxAmount >= minAmount, { "maxAmount needs to be greater equal minAmount" })
         require(maxAmountCount >= minAmountCount, { "maxAmountCount needs to be greater equal minAmountCount" })
+        require(priceUniquenessRatio == null || (priceUniquenessRatio > 0.0 && priceUniquenessRatio <= 1.0), 
+            { "priceUniquenessRatio must be between 0.0 (exclusive) and 1.0 (inclusive) if set" })
     }
 }
