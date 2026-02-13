@@ -4,7 +4,7 @@ pricebooks:
     id: "pricebook"
 
     # number of pricebooks to generate for this configuration
-    elementCount: 1000
+    elementCount: 50
     
     # maximum number of pricebooks per XML file (optional)
     # when set, output will be split into multiple files if total pricebooks exceeds this limit

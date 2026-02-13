@@ -40,15 +40,18 @@ data class PricebookGenerator(
         get() {
             val pricebooks: MutableList<Pricebook> = mutableListOf()
 
-            // Calculate total price entries once globally: products with prices * pricebooks * avg amounts per product
-            val totalProductCount = catalogConfiguration.totalProductCount()
-            val productsWithPrices = (totalProductCount * configuration.coverage).toInt()
+            // Get actual product count by counting product IDs (more accurate than totalProductCount formula)
+            val allProductIds = GeneratorHelper.getProductIds(catalogConfiguration)
+            val actualProductCount = allProductIds.count()
+            
+            // Calculate total price entries: products with prices * pricebooks * currencies * avg amounts per product
+            val productsWithPrices = (actualProductCount * configuration.coverage).toInt()
             val avgAmountsPerProduct = (configuration.minAmountCount + configuration.maxAmountCount) / 2
-            val totalPriceEntryCount = productsWithPrices * configuration.elementCount * avgAmountsPerProduct
+            val totalPriceEntryCount = productsWithPrices * configuration.elementCount * currencies.size * avgAmountsPerProduct
 
             // Generate global list of unique prices if priceUniquenessRatio is set
             val uniquePrices = if (configuration.priceUniquenessRatio != null && totalPriceEntryCount > 0) {
-                val uniquePriceCount = (totalPriceEntryCount * configuration.priceUniquenessRatio).toInt().coerceAtLeast(1)
+                val uniquePriceCount = (totalPriceEntryCount.toDouble() * configuration.priceUniquenessRatio).toInt().coerceAtLeast(1)
                 // Generate evenly spaced prices across the range
                 val step = (configuration.maxAmount - configuration.minAmount) / (uniquePriceCount - 1).coerceAtLeast(1)
                 (0 until uniquePriceCount).map { i ->
@@ -65,10 +68,10 @@ data class PricebookGenerator(
                     val seed = rng.nextLong()
 
                     // generate ParentPriceBook
-                    val allProductIds = GeneratorHelper.getProductIds(catalogConfiguration)
+                    val currentProductIds = GeneratorHelper.getProductIds(catalogConfiguration)
 
                     val productIds =
-                        getPartialProductSequence(seed, totalProductCount, configuration.coverage, allProductIds)
+                        getPartialProductSequence(seed, actualProductCount, configuration.coverage, currentProductIds)
 
                     val parent = ParentPriceBook(
                         productIds,
@@ -96,9 +99,9 @@ data class PricebookGenerator(
                                 parent,
                                 getPartialProductSequence(
                                     seed,
-                                    totalProductCount,
+                                    actualProductCount,
                                     configuration.coverage,
-                                    allProductIds
+                                    currentProductIds
                                 ),
                                 seed,
                                 metadata["PriceBook"].orEmpty(),
