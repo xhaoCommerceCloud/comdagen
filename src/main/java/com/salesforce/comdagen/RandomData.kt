@@ -93,7 +93,7 @@ object RandomData {
         val source = "nouns_${region.countryCode}.properties"
         if (exists(source)) {
             val list = NOUNS.getOrPut(region, { contentFileAsList(source) })
-            return list[(Math.abs(seed) % list.size).toInt()]
+            return list[(Math.abs(seed) % list.size).toInt()].replace(" ", "_")
         } else {
             val maxWordLength = 500 // totally arbitrary guess
             val book = BOOKS.getOrPut(region, {

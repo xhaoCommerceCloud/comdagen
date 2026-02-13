@@ -40,17 +40,38 @@ data class PricebookGenerator(
         get() {
             val pricebooks: MutableList<Pricebook> = mutableListOf()
 
+            // Get actual product count by counting product IDs (more accurate than totalProductCount formula)
+            val allProductIds = GeneratorHelper.getProductIds(catalogConfiguration)
+            val actualProductCount = allProductIds.count()
+            
+            // Calculate total price entries: products with prices * pricebooks * currencies * avg amounts per product
+            val productsWithPrices = (actualProductCount * configuration.coverage).toInt()
+            val avgAmountsPerProduct = (configuration.minAmountCount + configuration.maxAmountCount) / 2
+            val totalPriceEntryCount = productsWithPrices * configuration.elementCount * currencies.size * avgAmountsPerProduct
+
+            // Generate global list of unique prices if priceUniquenessRatio is set
+            val uniquePrices = if (configuration.priceUniquenessRatio != null && totalPriceEntryCount > 0) {
+                val uniquePriceCount = (totalPriceEntryCount.toDouble() * configuration.priceUniquenessRatio).toInt().coerceAtLeast(1)
+                // Generate evenly spaced prices across the range
+                val step = (configuration.maxAmount - configuration.minAmount) / (uniquePriceCount - 1).coerceAtLeast(1)
+                (0 until uniquePriceCount).map { i ->
+                    configuration.minAmount + (step * i)
+                }
+            } else {
+                null
+            }
+
+            var globalPriceIndex = 0
             for (currency in currencies) {
                 val rng = Random(configuration.initialSeed)
                 for (i in (1..configuration.elementCount)) {
                     val seed = rng.nextLong()
 
                     // generate ParentPriceBook
-                    val allProductIds = GeneratorHelper.getProductIds(catalogConfiguration)
+                    val currentProductIds = GeneratorHelper.getProductIds(catalogConfiguration)
 
-                    val totalProductCount = catalogConfiguration.totalProductCount()
                     val productIds =
-                        getPartialProductSequence(seed, totalProductCount, configuration.coverage, allProductIds)
+                        getPartialProductSequence(seed, actualProductCount, configuration.coverage, currentProductIds)
 
                     val parent = ParentPriceBook(
                         productIds,
@@ -59,9 +80,17 @@ data class PricebookGenerator(
                         configuration,
                         currency.toString(),
                         i,
-                        catalogConfiguration.hashCode()
+                        catalogConfiguration.hashCode(),
+                        totalPriceEntryCount,
+                        uniquePrices,
+                        globalPriceIndex
                     )
                     pricebooks.add(parent)
+                    
+                    // Update global counter for next pricebook
+                    if (uniquePrices != null) {
+                        globalPriceIndex = (globalPriceIndex + productsWithPrices) % uniquePrices.size
+                    }
 
                     // generate child pricebooks for parent if any
                     configuration.children?.forEach { childConfig ->
@@ -70,16 +99,18 @@ data class PricebookGenerator(
                                 parent,
                                 getPartialProductSequence(
                                     seed,
-                                    totalProductCount,
+                                    actualProductCount,
                                     configuration.coverage,
-                                    allProductIds
+                                    currentProductIds
                                 ),
                                 seed,
                                 metadata["PriceBook"].orEmpty(),
                                 childConfig,
                                 currency.toString(),
                                 i,
-                                catalogConfiguration.hashCode()
+                                catalogConfiguration.hashCode(),
+                                totalPriceEntryCount,
+                                uniquePrices
                             )
                         )
                     }

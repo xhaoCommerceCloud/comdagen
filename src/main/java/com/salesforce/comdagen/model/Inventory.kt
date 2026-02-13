@@ -99,7 +99,7 @@ class InventoryRecord(
 
 
     val perpetual: Boolean
-        get() = false
+        get() = config.perpetual
 
     val customAttributes: List<CustomAttribute>
         get() {

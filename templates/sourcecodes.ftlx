@@ -20,6 +20,13 @@
             </#list>
         </custom-attributes>
         </#if>
+        <#if group.pricebooks?has_content>
+        <pricebooks>
+            <#list group.pricebooks as pricebook>
+            <pricebook pricebook-id="${pricebook}" />
+            </#list>
+        </pricebooks>
+        </#if>
     </sourcecode-group>
     </#list>
 </sourcecodes>

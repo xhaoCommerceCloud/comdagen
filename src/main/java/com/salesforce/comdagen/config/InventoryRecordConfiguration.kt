@@ -14,6 +14,8 @@ data class InventoryRecordConfiguration(
 
     val maxCount: Int = 1000,
 
+    val perpetual: Boolean = false,
+
     override val customAttributes: Map<String, AttributeConfig>? = null,
 
     override val generatedAttributes: GeneratedAttributeConfig? = null,

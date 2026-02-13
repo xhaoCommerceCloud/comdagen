@@ -17,11 +17,13 @@ data class SourceCodeConfiguration(
 
     val maxCodes: Int = 10,
 
+    val pricebooksPerGroup: Int = 1,
+
     override val customAttributes: Map<String, AttributeConfig> = emptyMap(),
 
     override val generatedAttributes: GeneratedAttributeConfig? = null,
 
-    override val elementCount: Int = 10,
+    override val elementCount: Int = 0,
     override val initialSeed: Long,
     override val outputFilePattern: String = "sourcecodes.xml",
     override val outputDir: String = "",
@@ -29,5 +31,6 @@ data class SourceCodeConfiguration(
 ) : RenderConfig, ExtendableObjectConfig {
     init {
         require(maxCodes >= minCodes, { "maxCodes needs to be greater equal minCodes" })
+        require(pricebooksPerGroup > 0, { "pricebooksPerGroup must be greater than 0" })
     }
 }

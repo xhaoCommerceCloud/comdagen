@@ -31,20 +31,31 @@ abstract class Pricebook(
     protected val config: PricebookConfiguration, val currency: String, protected val seed: Long,
     private val attributeDefinitions: Set<AttributeDefinition>,
     private val productIds: Sequence<String>,
-    private val index: Int, private val catalogHashCode: Int
+    private val index: Int, private val catalogHashCode: Int,
+    private val totalPriceEntryCount: Int = 0,
+    private val uniquePrices: List<Double>? = null,
+    private val startPriceIndex: Int = 0
 ) {
-    val pricetables: Sequence<PriceTable>
-        get() {
-            val rng = Random(seed)
-            return productIds.map { PriceTable(it, rng.nextLong(), config, currency, salePriceBook) }
+    val pricetables: Sequence<PriceTable> by lazy {
+        val rng = Random(seed)
+        var priceIndex = startPriceIndex
+        val tables = mutableListOf<PriceTable>()
+        productIds.forEach { productId ->
+            val table = PriceTable(productId, rng.nextLong(), config, currency, salePriceBook, uniquePrices, priceIndex)
+            tables.add(table)
+            if (uniquePrices != null) {
+                priceIndex = (priceIndex + 1) % uniquePrices.size
+            }
         }
+        tables.asSequence()
+    }
 
     open val parentId: String? = null
 
     open val salePriceBook: Boolean = false
 
     val id: String
-        get() = "${config.id}-$currency-${Math.abs(config.hashCode() * catalogHashCode)}-$index"
+        get() = "$index-${config.id}-$currency"
 
     val customAttributes: List<CustomAttribute>
         get() {
@@ -72,12 +83,19 @@ abstract class Pricebook(
  */
 class Amount(
     private val seed: Long, private val config: PricebookConfiguration, val quantity: Int,
-    private val currency: String, private val sale: Boolean
+    private val currency: String, private val sale: Boolean, private val uniquePrices: List<Double>? = null,
+    private val priceIndex: Int = 0
 ) {
     val amount: Double
         get() {
             val rng = Random(seed)
-            val price = (config.minAmount + (config.maxAmount - config.minAmount) * rng.nextDouble()) / quantity
+            val price = if (uniquePrices != null && uniquePrices.isNotEmpty()) {
+                // Use sequential price from the list (cycling through)
+                uniquePrices[priceIndex] / quantity
+            } else {
+                // Continuous random price
+                (config.minAmount + (config.maxAmount - config.minAmount) * rng.nextDouble()) / quantity
+            }
             val exchangeRate: Double = CatalogGenerator.EXCHANGE_RATES.getProperty(currency).toDouble()
 
             // 10% discount for sales pricelist
@@ -108,7 +126,8 @@ class Amount(
  */
 class PriceTable(
     val productId: String, private val seed: Long, private val config: PricebookConfiguration,
-    private val currency: String, private val sale: Boolean
+    private val currency: String, private val sale: Boolean, private val uniquePrices: List<Double>? = null,
+    private val priceIndex: Int = 0
 ) {
     val amounts: List<Amount>
         get() {
@@ -121,7 +140,7 @@ class PriceTable(
                 else config.minAmountCount
 
             }
-            return (1..amountCount).map { quantity -> Amount(seed, config, quantity, currency, sale) }
+            return (1..amountCount).map { quantity -> Amount(seed, config, quantity, currency, sale, uniquePrices, priceIndex) }
         }
 }
 
@@ -131,8 +150,9 @@ class PriceTable(
 class ParentPriceBook(
     productIds: Sequence<String>,
     seed: Long, attributeDefinitions: Set<AttributeDefinition>, config: PricebookConfiguration,
-    currency: String, index: Int, catalogHashCode: Int
-) : Pricebook(config, currency, seed, attributeDefinitions, productIds, index, catalogHashCode)
+    currency: String, index: Int, catalogHashCode: Int, totalPriceEntryCount: Int = 0,
+    uniquePrices: List<Double>? = null, startPriceIndex: Int = 0
+) : Pricebook(config, currency, seed, attributeDefinitions, productIds, index, catalogHashCode, totalPriceEntryCount, uniquePrices, startPriceIndex)
 
 /**
  * Represents a single pricebook that has a parent pricebook, for example a sales pricebook that defines
@@ -154,8 +174,11 @@ class ChildPricebook(
     config: PricebookConfiguration,
     currency: String,
     index: Int,
-    catalogHashCode: Int
-) : Pricebook(config, currency, seed, attributeDefinitions, productIds, index, catalogHashCode) {
+    catalogHashCode: Int,
+    totalPriceEntryCount: Int = 0,
+    uniquePrices: List<Double>? = null,
+    startPriceIndex: Int = 0
+) : Pricebook(config, currency, seed, attributeDefinitions, productIds, index, catalogHashCode, totalPriceEntryCount, uniquePrices, startPriceIndex) {
 
     // by default child price books are for sales (get 10% discount applied)
     override val salePriceBook: Boolean

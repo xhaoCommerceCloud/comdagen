@@ -8,3 +8,5 @@ inventories:
     # How many items of a single SKU should there be?
     minCount: 0
     maxCount: 5000
+    # Set to true for perpetual inventory (infinite stock)
+    perpetual: true

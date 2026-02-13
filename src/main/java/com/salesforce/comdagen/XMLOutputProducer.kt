@@ -132,6 +132,10 @@ constructor(
                 templateName,
                 "${generator.configuration.outputDir}/${catalog.id}/${generator.configuration.getFileName()}", modelData
             )
+
+            // Generate CSV file with category names
+            LOGGER.info("Start generating categories CSV for catalog ${catalog.id}")
+            produceCategoriesCsv(catalog.categories, "${generator.configuration.outputDir}/${catalog.id}/categories.csv")
         }
     }
 
@@ -198,6 +202,51 @@ constructor(
                 "${generator.configuration.outputDir}/${library.libraryId}/${library.libraryId}.xml",
                 modelData
             )
+        }
+    }
+
+    @Throws(IOException::class)
+    private fun renderPricebooks(generator: PricebookGenerator, currentGeneratorIndex: Int = 0) {
+        val maxPerFile = generator.configuration.maxPricebooksPerFile
+        File("$outputDir/${generator.configuration.outputDir}").apply { mkdirs() }
+
+        if (maxPerFile == null || maxPerFile <= 0) {
+            // No splitting - render all pricebooks to a single file
+            val modelData = mapOf("gen" to generator)
+            produce(
+                generator.generatorTemplate,
+                "${generator.configuration.outputDir}/${generator.configuration.getFileName(currentGeneratorIndex)}",
+                modelData
+            )
+        } else {
+            // Split pricebooks into multiple files
+            val allPricebooks = generator.objects.toList()
+            val chunks = allPricebooks.chunked(maxPerFile)
+            
+            LOGGER.info("Splitting ${allPricebooks.size} pricebooks into ${chunks.size} files (max $maxPerFile per file)")
+            
+            chunks.forEachIndexed { chunkIndex, pricebookChunk ->
+                // Create a wrapper that provides the chunk as a sequence
+                val chunkWrapper = object {
+                    val objects: Sequence<com.salesforce.comdagen.model.Pricebook> = pricebookChunk.asSequence()
+                }
+                val modelData = mapOf("gen" to chunkWrapper)
+                
+                // Calculate file index: combine generator index and chunk index
+                val fileIndex = if (chunks.size > 1) {
+                    if (currentGeneratorIndex > 0) currentGeneratorIndex * 1000 + chunkIndex + 1 else chunkIndex + 1
+                } else {
+                    currentGeneratorIndex
+                }
+                
+                val fileName = generator.configuration.getFileName(fileIndex)
+                LOGGER.info("Writing pricebook file $fileName with ${pricebookChunk.size} pricebooks")
+                produce(
+                    generator.generatorTemplate,
+                    "${generator.configuration.outputDir}/$fileName",
+                    modelData
+                )
+            }
         }
     }
 
@@ -296,6 +345,10 @@ constructor(
                 val sourceCodeData = mapOf("gen" to it.sourceCodeGenerator)
                 produce(it.sourceCodeGenerator.generatorTemplate, "sites/${it.id}/sourcecodes.xml", sourceCodeData)
 
+                // Also generate CSV file with source codes
+                LOGGER.info("Start generating source codes CSV for site ${it.id}")
+                produceSourceCodesCsv(it.sourceCodeGenerator, "sites/${it.id}/sourcecodes.csv")
+
                 sourceCodeGenerators.add(it.sourceCodeGenerator)
             }
 
@@ -376,7 +429,7 @@ constructor(
 
 
             LOGGER.info("Start rendering pricebooks with template ${pricebookGenerator.generatorTemplate}")
-            render(pricebookGenerator, index)
+            renderPricebooks(pricebookGenerator, index)
         }
 
         // render customer lists
@@ -468,6 +521,51 @@ constructor(
             } else {
                 LOGGER.warn("File not found at : $fileName")
             }
+        }
+    }
+
+    /**
+     * Generates a CSV file containing all category IDs.
+     * Format: category_id
+     */
+    @Throws(IOException::class)
+    private fun produceCategoriesCsv(categories: List<com.salesforce.comdagen.model.Category>, outputFileName: String) {
+        try {
+            FileWriter(File(outputDir, outputFileName)).use { writer ->
+                // Write CSV header
+                writer.write("category_id\n")
+                
+                // Write each category
+                categories.forEach { category ->
+                    writer.write("${category.id}\n")
+                }
+            }
+        } catch (e: IOException) {
+            LOGGER.error("Unable to produce CSV file {}", outputFileName, e)
+        }
+    }
+
+    /**
+     * Generates a CSV file containing all source codes.
+     * Format: group_id,source_code,pricebooks
+     */
+    @Throws(IOException::class)
+    private fun produceSourceCodesCsv(generator: SourceCodeGenerator, outputFileName: String) {
+        try {
+            FileWriter(File(outputDir, outputFileName)).use { writer ->
+                // Write CSV header
+                writer.write("group_id,source_code,pricebooks\n")
+                
+                // Write each source code group and its codes
+                generator.objects.forEach { group ->
+                    val pricebooksStr = group.pricebooks?.joinToString(";") ?: ""
+                    group.sourceCodes.forEach { code ->
+                        writer.write("${group.id},${code},${pricebooksStr}\n")
+                    }
+                }
+            }
+        } catch (e: IOException) {
+            LOGGER.error("Unable to produce CSV file {}", outputFileName, e)
         }
     }
 
