@@ -40,9 +40,8 @@ data class PricebookGenerator(
         get() {
             val pricebooks: MutableList<Pricebook> = mutableListOf()
 
-            // Get actual product count by counting product IDs (more accurate than totalProductCount formula)
-            val allProductIds = GeneratorHelper.getProductIds(catalogConfiguration)
-            val actualProductCount = allProductIds.count()
+            // Use totalProductCount() to avoid consuming the sequence
+            val actualProductCount = catalogConfiguration.totalProductCount()
             
             // Calculate total price entries: products with prices * pricebooks * currencies * avg amounts per product
             val productsWithPrices = (actualProductCount * configuration.coverage).toInt()

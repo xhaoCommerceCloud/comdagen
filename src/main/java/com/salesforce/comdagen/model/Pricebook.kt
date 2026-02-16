@@ -36,19 +36,18 @@ abstract class Pricebook(
     private val uniquePrices: List<Double>? = null,
     private val startPriceIndex: Int = 0
 ) {
-    val pricetables: Sequence<PriceTable> by lazy {
-        val rng = Random(seed)
-        var priceIndex = startPriceIndex
-        val tables = mutableListOf<PriceTable>()
-        productIds.forEach { productId ->
-            val table = PriceTable(productId, rng.nextLong(), config, currency, salePriceBook, uniquePrices, priceIndex)
-            tables.add(table)
-            if (uniquePrices != null) {
-                priceIndex = (priceIndex + 1) % uniquePrices.size
+    val pricetables: Sequence<PriceTable>
+        get() {
+            val rng = Random(seed)
+            var priceIndex = startPriceIndex
+            return productIds.map { productId ->
+                val table = PriceTable(productId, rng.nextLong(), config, currency, salePriceBook, uniquePrices, priceIndex)
+                if (uniquePrices != null) {
+                    priceIndex = (priceIndex + 1) % uniquePrices.size
+                }
+                table
             }
         }
-        tables.asSequence()
-    }
 
     open val parentId: String? = null
 

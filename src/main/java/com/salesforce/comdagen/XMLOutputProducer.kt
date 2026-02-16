@@ -219,13 +219,27 @@ constructor(
                 modelData
             )
         } else {
-            // Split pricebooks into multiple files
-            val allPricebooks = generator.objects.toList()
-            val chunks = allPricebooks.chunked(maxPerFile)
+            // Split pricebooks into multiple files - process lazily to avoid OOM
+            val totalPricebooks = generator.configuration.elementCount * 
+                (generator.configuration.children?.size?.plus(1) ?: 1)
+            val totalFiles = (totalPricebooks + maxPerFile - 1) / maxPerFile
             
-            LOGGER.info("Splitting ${allPricebooks.size} pricebooks into ${chunks.size} files (max $maxPerFile per file)")
+            LOGGER.info("Splitting ~$totalPricebooks pricebooks into ~$totalFiles files (max $maxPerFile per file)")
             
-            chunks.forEachIndexed { chunkIndex, pricebookChunk ->
+            var chunkIndex = 0
+            val iterator = generator.objects.iterator()
+            
+            while (iterator.hasNext()) {
+                // Collect only one chunk at a time
+                val pricebookChunk = mutableListOf<com.salesforce.comdagen.model.Pricebook>()
+                repeat(maxPerFile) {
+                    if (iterator.hasNext()) {
+                        pricebookChunk.add(iterator.next())
+                    }
+                }
+                
+                if (pricebookChunk.isEmpty()) break
+                
                 // Create a wrapper that provides the chunk as a sequence
                 val chunkWrapper = object {
                     val objects: Sequence<com.salesforce.comdagen.model.Pricebook> = pricebookChunk.asSequence()
@@ -233,7 +247,7 @@ constructor(
                 val modelData = mapOf("gen" to chunkWrapper)
                 
                 // Calculate file index: combine generator index and chunk index
-                val fileIndex = if (chunks.size > 1) {
+                val fileIndex = if (totalFiles > 1) {
                     if (currentGeneratorIndex > 0) currentGeneratorIndex * 1000 + chunkIndex + 1 else chunkIndex + 1
                 } else {
                     currentGeneratorIndex
@@ -246,6 +260,10 @@ constructor(
                     "${generator.configuration.outputDir}/$fileName",
                     modelData
                 )
+                
+                // Clear chunk to allow GC before next iteration
+                pricebookChunk.clear()
+                chunkIndex++
             }
         }
     }
