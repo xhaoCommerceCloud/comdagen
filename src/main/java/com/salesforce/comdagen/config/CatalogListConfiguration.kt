@@ -92,7 +92,11 @@ data class CatalogListConfiguration(
     fun totalProductCount() =
             /* each catalog */ elementCount *
             (/* standard products */ products.elementCount
-                    + /* variation products */ (variationProducts.sumBy { it.elementCount * (it.sharedVariationAttributes.size + it.localVariationAttributes.size) })
+                    + /* variation products */ (variationProducts.sumBy { config -> 
+                        config.elementCount * config.attributes.fold(1) { acc, attr -> 
+                            acc * (attr.values.size * attr.probability).toInt().coerceAtLeast(1)
+                        }
+                    })
                     + /* bundles */ (bundleConfig?.elementCount ?: 0)
                     + /* sets */ (productSets?.elementCount ?: 0))
 }
