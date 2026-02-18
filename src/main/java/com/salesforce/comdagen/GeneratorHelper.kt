@@ -15,13 +15,12 @@ import java.util.*
 
 object GeneratorHelper {
 
-    private val productIds: MutableMap<CatalogListConfiguration, Sequence<String>> = mutableMapOf()
-
     fun getProductIds(
         catalogConfig: CatalogListConfiguration,
         regions: List<SupportedZone> = listOf(SupportedZone.Generic)
     ): Sequence<String> {
-        return productIds.getOrPut(catalogConfig) { generateProductIds(catalogConfig) }
+        // Regenerate sequence each time since Kotlin sequences are single-use
+        return generateProductIds(catalogConfig)
     }
 
     private fun generateProductIds(
