@@ -15,9 +15,11 @@ import freemarker.template.*
 import freemarker.template.Configuration
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.io.FileOutputStream
 import java.io.FileWriter
 import java.io.IOException
 import java.io.OutputStreamWriter
+import java.util.zip.GZIPOutputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.*
@@ -590,20 +592,18 @@ constructor(
     @Throws(IOException::class)
     fun produce(templateName: String, outputFileName: String, modelData: Map<String, Any>) {
         val template = freemarkerConfig.getTemplate(templateName)
+        // Always write gzipped files
+        val gzippedFileName = if (outputFileName.endsWith(".gz")) outputFileName else "$outputFileName.gz"
         try {
-            FileWriter(File(outputDir, outputFileName)).use { writer ->
-                if (LOGGER.isDebugEnabled) {
-                    // write output to the console for testing
-                    val consoleWriter = OutputStreamWriter(System.out)
-                    template.process(modelData, consoleWriter)
+            GZIPOutputStream(FileOutputStream(File(outputDir, gzippedFileName))).use { gzipOut ->
+                OutputStreamWriter(gzipOut, Charsets.UTF_8).use { writer ->
+                    template.process(modelData, writer)
                 }
-                template.process(modelData, writer)
             }
         } catch (e: IOException) {
-            LOGGER.error("Unable to produce {} from template {}", outputFileName, templateName, e)
-            // TODO rethrow?
+            LOGGER.error("Unable to produce {} from template {}", gzippedFileName, templateName, e)
         } catch (e: TemplateException) {
-            LOGGER.error("Unable to produce {} from template {}", outputFileName, templateName, e)
+            LOGGER.error("Unable to produce {} from template {}", gzippedFileName, templateName, e)
         }
     }
 
