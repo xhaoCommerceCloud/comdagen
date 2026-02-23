@@ -21,8 +21,7 @@
         <#list pricebook.pricetables as pricetable>
             <price-table product-id="${pricetable.productId}">
                 <#list pricetable.amounts as amount>
-                <#setting number_format="0.##">
-                <amount quantity="${amount.quantity}">${amount.amount}</amount>
+                <amount quantity="${amount.quantity}">${amount.amount?string["0.00"]}</amount>
                 </#list>
             </price-table>
         </#list>
