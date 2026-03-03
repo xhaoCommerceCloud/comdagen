@@ -50,11 +50,15 @@ data class PricebookGenerator(
 
             // Generate global list of unique prices if priceUniquenessRatio is set
             val uniquePrices = if (configuration.priceUniquenessRatio != null && totalPriceEntryCount > 0) {
-                val uniquePriceCount = (totalPriceEntryCount.toDouble() * configuration.priceUniquenessRatio).toInt().coerceAtLeast(1)
-                // Generate evenly spaced prices across the range
+                val desiredUniquePriceCount = (totalPriceEntryCount.toDouble() * configuration.priceUniquenessRatio).toInt().coerceAtLeast(1)
+                // Cap at the number of distinct values possible at 2 decimal places within the range,
+                // since the output template formats prices with 2 decimal places
+                val maxDistinctPrices = ((configuration.maxAmount - configuration.minAmount) * 100).toInt() + 1
+                val uniquePriceCount = desiredUniquePriceCount.coerceAtMost(maxDistinctPrices)
+                // Generate prices at 0.01 increments to ensure each is distinct when rounded to 2 decimals
                 val step = (configuration.maxAmount - configuration.minAmount) / (uniquePriceCount - 1).coerceAtLeast(1)
                 (0 until uniquePriceCount).map { i ->
-                    configuration.minAmount + (step * i)
+                    Math.round((configuration.minAmount + step * i) * 100.0) / 100.0
                 }
             } else {
                 null
