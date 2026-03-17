@@ -86,7 +86,8 @@ data class PricebookGenerator(
                         catalogConfiguration.hashCode(),
                         totalPriceEntryCount,
                         uniquePrices,
-                        globalPriceIndex
+                        globalPriceIndex,
+                        hasTimeBasedPrice = shouldGenerateTimeBasedPricebook(configuration, seed, i, currency.toString())
                     )
                     pricebooks.add(parent)
                     
@@ -113,7 +114,13 @@ data class PricebookGenerator(
                                 i,
                                 catalogConfiguration.hashCode(),
                                 totalPriceEntryCount,
-                                uniquePrices
+                                uniquePrices,
+                                hasTimeBasedPrice = shouldGenerateTimeBasedPricebook(
+                                    childConfig,
+                                    seed,
+                                    i,
+                                    "${currency}-child-${childConfig.id}"
+                                )
                             )
                         )
                     }
@@ -126,4 +133,18 @@ data class PricebookGenerator(
     override val metadata: Map<String, Set<AttributeDefinition>> = mapOf(
         "PriceBook" to configuration.attributeDefinitions()
     )
+
+    private fun shouldGenerateTimeBasedPricebook(
+        config: PricebookConfiguration,
+        seed: Long,
+        index: Int,
+        discriminator: String
+    ): Boolean {
+        if (config.timeBasedPricebookPercentage <= 0.0) {
+            return false
+        }
+
+        val deterministicSeed = seed xor index.toLong() xor discriminator.hashCode().toLong()
+        return Random(deterministicSeed).nextDouble() < config.timeBasedPricebookPercentage
+    }
 }

@@ -4,13 +4,13 @@ pricebooks:
     id: "pricebook"
 
     # number of pricebooks to generate for this configuration
-    elementCount: 50
+    elementCount: 100
     
     # maximum number of pricebooks per XML file (optional)
     # when set, output will be split into multiple files if total pricebooks exceeds this limit
     # e.g., with 6000 pricebooks and maxPricebooksPerFile: 100, generates 60 XML files
     # leave commented out or set to 0 to write all pricebooks to a single file
-    maxPricebooksPerFile: 500
+    maxPricebooksPerFile: 50
 
     # define range of prices per product and pricebook
     minAmountCount: 1
@@ -18,12 +18,12 @@ pricebooks:
 
     # define range of price in USD
     minAmount: 0.01
-    maxAmount: 9999.99
+    maxAmount: 999999.99
 
     # price uniqueness ratio (0.0 to 1.0) - ratio of unique prices to total price entries
     # e.g., 0.1 means 10% unique prices, so if 1000 products, only 100 unique price values
     # if not set, prices are generated as continuous random values
-    priceUniquenessRatio: 0.1
+    priceUniquenessRatio: 0.0005
 
 #    # define pricebook custom attributes
 #    customAttributes:
@@ -37,10 +37,13 @@ pricebooks:
       elementCount: 0
 
     # percentage of products to generate prices for (1.0 == 100%, 0.75 == 75%, etc.)
-    coverage: 1.0
+    coverage: 1
 
     # if true generate cheaper prices
     sales: false
+
+    # percentage (0.0 to 1.0) of generated pricebooks that contain exactly one time-based price
+    timeBasedPricebookPercentage: 0.0
 
 #    # define child pricebooks
 #    children:

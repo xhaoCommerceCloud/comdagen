@@ -20,6 +20,12 @@
         <price-tables>
         <#list pricebook.pricetables as pricetable>
             <price-table product-id="${pricetable.productId}">
+                <#if pricetable.onlineFrom?has_content>
+                <online-from>${pricetable.onlineFrom}</online-from>
+                </#if>
+                <#if pricetable.onlineTo?has_content>
+                <online-to>${pricetable.onlineTo}</online-to>
+                </#if>
                 <#list pricetable.amounts as amount>
                 <amount quantity="${amount.quantity}">${amount.amount?string["0.00"]}</amount>
                 </#list>

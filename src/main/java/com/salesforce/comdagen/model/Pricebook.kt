@@ -9,6 +9,10 @@ package com.salesforce.comdagen.model
 
 import com.salesforce.comdagen.config.PricebookConfiguration
 import com.salesforce.comdagen.generator.CatalogGenerator
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 /**
@@ -34,14 +38,20 @@ abstract class Pricebook(
     private val index: Int, private val catalogHashCode: Int,
     private val totalPriceEntryCount: Int = 0,
     private val uniquePrices: List<Double>? = null,
-    private val startPriceIndex: Int = 0
+    private val startPriceIndex: Int = 0,
+    private val hasTimeBasedPrice: Boolean = false
 ) {
     val pricetables: Sequence<PriceTable>
         get() {
             val rng = Random(seed)
             var priceIndex = startPriceIndex
+            var hasEmittedTimeBasedPrice = false
             return productIds.map { productId ->
-                val table = PriceTable(productId, rng.nextLong(), config, currency, salePriceBook, uniquePrices, priceIndex)
+                val isTimeBased = hasTimeBasedPrice && !hasEmittedTimeBasedPrice
+                val table = PriceTable(productId, rng.nextLong(), config, currency, salePriceBook, uniquePrices, priceIndex, isTimeBased)
+                if (isTimeBased) {
+                    hasEmittedTimeBasedPrice = true
+                }
                 if (uniquePrices != null) {
                     priceIndex = (priceIndex + 1) % uniquePrices.size
                 }
@@ -126,14 +136,43 @@ class Amount(
 class PriceTable(
     val productId: String, private val seed: Long, private val config: PricebookConfiguration,
     private val currency: String, private val sale: Boolean, private val uniquePrices: List<Double>? = null,
-    private val priceIndex: Int = 0
+    private val priceIndex: Int = 0,
+    private val timeBased: Boolean = false
 ) {
+    companion object {
+        private val ISO_UTC_MILLIS: DateTimeFormatter =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
+    }
+
+    val onlineFrom: String?
+        get() {
+            if (!timeBased) {
+                return null
+            }
+
+            val from = LocalDate.now(ZoneOffset.UTC).atStartOfDay().toInstant(ZoneOffset.UTC)
+            return ISO_UTC_MILLIS.format(from)
+        }
+
+    val onlineTo: String?
+        get() {
+            if (!timeBased) {
+                return null
+            }
+
+            val to = LocalDate.now(ZoneOffset.UTC)
+                .atStartOfDay()
+                .toInstant(ZoneOffset.UTC)
+                .plusSeconds(90L * 24L * 60L * 60L)
+            return ISO_UTC_MILLIS.format(to)
+        }
+
     val amounts: List<Amount>
         get() {
             val rng = Random(seed)
 
             var amountCount = 1
-            if (config.maxAmountCount > 1) {
+            if (!timeBased && config.maxAmountCount > 1) {
                 amountCount = if (config.maxAmountCount > config.minAmountCount)
                     rng.nextInt(config.maxAmountCount - config.minAmountCount) + config.minAmountCount
                 else config.minAmountCount
@@ -150,8 +189,9 @@ class ParentPriceBook(
     productIds: Sequence<String>,
     seed: Long, attributeDefinitions: Set<AttributeDefinition>, config: PricebookConfiguration,
     currency: String, index: Int, catalogHashCode: Int, totalPriceEntryCount: Int = 0,
-    uniquePrices: List<Double>? = null, startPriceIndex: Int = 0
-) : Pricebook(config, currency, seed, attributeDefinitions, productIds, index, catalogHashCode, totalPriceEntryCount, uniquePrices, startPriceIndex)
+    uniquePrices: List<Double>? = null, startPriceIndex: Int = 0,
+    hasTimeBasedPrice: Boolean = false
+) : Pricebook(config, currency, seed, attributeDefinitions, productIds, index, catalogHashCode, totalPriceEntryCount, uniquePrices, startPriceIndex, hasTimeBasedPrice)
 
 /**
  * Represents a single pricebook that has a parent pricebook, for example a sales pricebook that defines
@@ -176,8 +216,9 @@ class ChildPricebook(
     catalogHashCode: Int,
     totalPriceEntryCount: Int = 0,
     uniquePrices: List<Double>? = null,
-    startPriceIndex: Int = 0
-) : Pricebook(config, currency, seed, attributeDefinitions, productIds, index, catalogHashCode, totalPriceEntryCount, uniquePrices, startPriceIndex) {
+    startPriceIndex: Int = 0,
+    hasTimeBasedPrice: Boolean = false
+) : Pricebook(config, currency, seed, attributeDefinitions, productIds, index, catalogHashCode, totalPriceEntryCount, uniquePrices, startPriceIndex, hasTimeBasedPrice) {
 
     // by default child price books are for sales (get 10% discount applied)
     override val salePriceBook: Boolean

@@ -69,6 +69,11 @@ data class PricebookConfiguration(
     val sales: Boolean = false,
 
     /**
+     * Percentage (0.0 to 1.0) of generated pricebooks that should contain exactly one time-based price.
+     */
+    val timeBasedPricebookPercentage: Double = 0.0,
+
+    /**
      * custom attributes for pricebooks
      */
     override val customAttributes: Map<String, AttributeConfig>? = null,
@@ -101,5 +106,7 @@ data class PricebookConfiguration(
         require(maxAmountCount >= minAmountCount, { "maxAmountCount needs to be greater equal minAmountCount" })
         require(priceUniquenessRatio == null || (priceUniquenessRatio > 0.0 && priceUniquenessRatio <= 1.0), 
             { "priceUniquenessRatio must be between 0.0 (exclusive) and 1.0 (inclusive) if set" })
+        require(timeBasedPricebookPercentage in 0.0..1.0,
+            { "timeBasedPricebookPercentage must be between 0.0 and 1.0" })
     }
 }
